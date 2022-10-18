@@ -6,6 +6,7 @@ import originControl from "./middlewares/originControl.js";
 
 // Controllers 
 import userController from "./controllers/user.controller.js";
+import bmiController from "./controllers/bmi.controller.js";
 const app = express();
 dotenv.config();
 app.use(express.json());
@@ -15,7 +16,6 @@ app.use(expressFileUpload());
 app.use(originControl);
 
 app.use("/user", userController);
-
-
+app.use("/bmi", bmiController);
 
 export default app;
