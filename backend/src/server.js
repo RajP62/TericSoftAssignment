@@ -1,12 +1,14 @@
 import app from "./index.js";
+import dbConnect from "./configs/db.js";
 const PORT = process.env.PORT || 4000;
 
 
-app.listen(PORT, ()=>{
+app.listen(PORT, async ()=>{
     try{
+      await dbConnect();
     console.log(`Server is running on port ${PORT}`);
     }
     catch(e){
-      console.log("Something went wrong");
+      console.log(e.message);
     }
 })  

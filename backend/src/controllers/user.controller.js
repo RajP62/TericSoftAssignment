@@ -6,6 +6,7 @@ import {pbkdf2Sync } from "crypto";
 import fs from 'fs';
 import validateCredentials from "../middlewares/validateCredentials.js";
 import User from "../models/user.model.js";
+import { resourceUsage } from "process";
 
 router.post("/", validateCredentials, async (req, res)=>{
     try{
@@ -37,7 +38,13 @@ router.post("/", validateCredentials, async (req, res)=>{
             return res.send({error: true, message: "User already exists"});
         }
 
-        return res.redirect("")
+        const user = new User({picture: picturePath, name, email, password});
+
+        user.save().then(res=>{
+            return res.send({error: false, message: "User registered successfully"});
+        }).catch(e=>{
+           return res.send({error: true, message: e.message});
+        });
 
     }
     catch(e){
