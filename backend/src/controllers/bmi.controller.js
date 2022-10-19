@@ -3,8 +3,6 @@ const router = express.Router();
 import {authenticate} from "../middlewares/authenticate.js";
 import {calculateBmi} from "../features/calculateBmi.js";
 import History from "../models/history.model.js"
-import app from "../index.js";
-
 router.post("/calculate", authenticate,  async(req, res)=>{
     try{
         const {height, weight} = req.body;
@@ -27,12 +25,8 @@ router.post("/calculate", authenticate,  async(req, res)=>{
 router.get("/history", authenticate, async (req, res)=>{
     try{
         const id = req.user?.id;
-        const history = await History.findById(id);
-        history.save().then(()=>{
-            return res.send({error: true, history});
-        }).catch(e=>{
-            return res.send({error: true, message: e.message});
-        })
+        const history = await History.find({userId: id});
+        return res.send({error: false, history});
     }
     catch(e){
         return res.send({error: true, message: "Something went wrong"});

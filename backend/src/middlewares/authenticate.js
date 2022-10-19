@@ -1,4 +1,4 @@
-import jwt from "json-web-token";
+import jwt from "jsonwebtoken";
 export const verifyToken = (token)=>{
     return new Promise((resolve, reject)=>{
         jwt.verify(token, process.env.JWT_KEY, function(err, decode){

@@ -1,29 +1,32 @@
 import express from "express";
 const router = express.Router();
 import path from "path";
+import { fileURLToPath } from "url";
 import crypto from "node:crypto";
 import {pbkdf2Sync } from "crypto";
 import fs from 'fs';
 import validateCredentials from "../middlewares/validateCredentials.js";
 import User from "../models/user.model.js";
-import jwt from "json-web-token";
-import { resourceUsage } from "process";
+import jwt from "jsonwebtoken";
 import { authenticate } from "../middlewares/authenticate.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 router.post("/", validateCredentials, async (req, res)=>{
     try{
         const image = req.files?.image;
         let {name, email, password} = req.body;
         password= pbkdf2Sync(password, process.env.HASH_SECRET, 60, 60, "sha256").toString("hex");
-        const type = path.extname(image.name?.toLowerCase());
-        if(!image || (type!=="png" && type!=="jpeg" && type!=="jpg")){
-            return res.send({error: true, message:"Kidly submit a vaild image"});
+        if(!image){
+            return res.send({error: true, message: "Kindly submit a valid image"});
         }
-
-        const picturePath = path.join(__dirname, "files", image.name);
+        console.log(image);
+        const picturePath = path.join(__dirname, "../..", "files", `${Date.now()}${Math.random(1, 1000000000)}${image.name}`);
         const data = await new Promise((resolve, reject)=>{
             image.mv(picturePath, function(error){
-                if(err){
+                if(error){
                     reject(error);
                 }
                 else{
@@ -50,7 +53,7 @@ router.post("/", validateCredentials, async (req, res)=>{
 
     }
     catch(e){
-        return res.send({error: false, message: e.message});
+        return res.send({error: true, message: e.message});
     }
 });
 
@@ -67,7 +70,8 @@ router.post("/login",async (req, res)=>{
         password = pbkdf2Sync(password, process.env.HASH_SECRET, 60, 60, "sha256").toString("hex");
 
         const {id, picture, name, email:userEmail} = user[0];
-        if(password!==user.password){
+        console.log(password, user.password);
+        if(password!==user[0].password){
             return res.send({error: true, message: "Password doesn't match"});
         }
 
@@ -88,7 +92,7 @@ router.post("/login",async (req, res)=>{
 
 router.get("", authenticate, async (req, res)=>{
     try{
-        return res.send(req.user);
+        return res.send({user: req.user});
     }
     catch(e){
         return res.send({error: false, message: "Something went wrong"});
@@ -97,14 +101,41 @@ router.get("", authenticate, async (req, res)=>{
 
 router.post("/logout", (req, res)=>{
     try{
-        res.clearCookie("access");
-        res.clearCookie("refresh");
+        res.clearCookie("access", {path:"/"});
+        res.clearCookie("refresh", {path:"/"});
         res.send({error: false, message:"User logged out successfully"});
     }
     catch(e){
         res.send({error: true, message: "Something went wrong"});
     }
 });
+
+router.get("/refresh", async(req, res)=>{
+    try{
+        const token = req.cookies?.refresh;
+        if(!token){
+            return res.send({error: true, message: "Refresh token doesn't exist"});
+        }
+        let decoded;
+        try{
+            jwt.verify(token, process.env.JWT_REFRESH_SECRET, function(err, resp){
+                if(err) return res.send({error: true, message: "Invalid refresh token"});
+                decoded=resp;
+            });
+        }
+        catch(e){
+            return res.send({error: true, message: `error is ${e.message}`});
+        }
+        const {id, picture, name, email} = decoded;
+
+        const access_jwt = jwt.sign({id, picture, name, email}, process.env.JWT_KEY, {expiresIn: "10m"});
+        res.cookie("access", access_jwt, { expires: new Date(Date.now()+ 600000+864000000)});
+        return res.send({error: false, message: "Access token sent successfully"});
+    }
+    catch(e){
+        return res.send({error: true, message: "Something went wrong"});
+    }
+})
 
 
 export default router;
